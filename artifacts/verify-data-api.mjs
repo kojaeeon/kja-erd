@@ -1,0 +1,10 @@
+import {demo} from '../src/model.js';
+import {writeFileSync} from 'node:fs';
+const document=demo('db2'),table=document.tables.find(t=>t.name==='blog_post');
+const body={document,tableId:table.id,includeIdentity:false};
+const response=await fetch('http://127.0.0.1:3000/api/test-data/template',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(!response.ok)throw Error(await response.text());
+const buffer=Buffer.from(await response.arrayBuffer());writeFileSync('artifacts/test-data-template.xlsx',buffer);
+const converted=await fetch('http://127.0.0.1:3000/api/test-data/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,content:buffer.toString('base64')})});
+const result=await converted.json();if(!converted.ok)throw Error(JSON.stringify(result));
+console.log(JSON.stringify({templateBytes:buffer.length,rows:result.count,sql:result.text}));

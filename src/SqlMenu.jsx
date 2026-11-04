@@ -1,0 +1,9 @@
+import React,{useEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
+import {Code2,ChevronDown,Upload} from 'lucide-react';
+export default function SqlMenu({onOutput,onImport}) {
+  const [position,setPosition]=useState(null),trigger=useRef(),menu=useRef();
+  useEffect(()=>{if(!position)return;menu.current?.querySelector('button')?.focus();const close=e=>{if(!menu.current?.contains(e.target)&&!trigger.current?.contains(e.target))setPosition(null);};const key=e=>{if(e.key==='Escape'){e.stopPropagation();setPosition(null);trigger.current?.focus();}};const resize=()=>setPosition(null);document.addEventListener('pointerdown',close);document.addEventListener('keydown',key);window.addEventListener('resize',resize);return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',key);window.removeEventListener('resize',resize);};},[position]);
+  const run=fn=>{setPosition(null);fn();};
+  return <><button ref={trigger} aria-label="SQL 메뉴" aria-haspopup="menu" aria-expanded={!!position} onClick={()=>{if(position){setPosition(null);return;}const r=trigger.current.getBoundingClientRect();setPosition({left:Math.max(8,Math.min(r.left,window.innerWidth-270)),top:Math.min(r.bottom+5,window.innerHeight-110)});}}><Code2 size={17}/> SQL <ChevronDown size={13}/></button>{position&&createPortal(<div ref={menu} role="menu" aria-label="SQL 메뉴" className="table-actions-menu header-sql-menu" style={position} onKeyDown={e=>{if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();const items=[...menu.current.querySelectorAll('button')],index=items.indexOf(document.activeElement);items[(index+(e.key==='ArrowDown'?1:items.length-1))%items.length].focus();}}}><button role="menuitem" onClick={()=>run(onOutput)}><Code2 size={15}/> 1. ERD 전체 SQL OUT</button><button role="menuitem" onClick={()=>run(onImport)}><Upload size={15}/> 2. SQL 읽어서 테이블 레이아웃 생성</button></div>,document.body)}</>;
+}
