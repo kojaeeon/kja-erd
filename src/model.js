@@ -74,8 +74,16 @@ export function relationIssue(document,value,excludeId) {
   if(document.relations.some(r=>r.id!==excludeId&&r.sourceColumn===value.sourceColumn&&r.targetColumn===value.targetColumn))return '이미 연결된 컬럼 관계입니다.';
   return '';
 }
+export function relationStyle(value={}) {
+  const color=value.lineColor??'#63918c',width=Number(value.lineWidth??2),kind=value.lineStyle??'auto';
+  if(!/^#[a-f\d]{6}$/i.test(color))throw Error('연결선 색상은 6자리 HEX로 입력하세요.');
+  if(!Number.isFinite(width)||width<1||width>10)throw Error('연결선 두께는 1~10px로 입력하세요.');
+  if(!['auto','solid','dashed','dotted','dashdot'].includes(kind))throw Error('연결선 종류를 확인하세요.');
+  return {stroke:color,strokeWidth:width,strokeDasharray:({auto:value.identifying?'':'6 4',solid:'',dashed:'8 5',dotted:'2 4',dashdot:'8 4 2 4'})[kind]};
+}
 export function buildRelation(document,value) {
   const issue=relationIssue(document,value,value.id);if(issue)throw Error(issue);
+  relationStyle(value);
   const description=String(value.description||'').trim();if(description.length>1000)throw Error('관계 설명은 1000자까지 입력하세요.');
   return {...value,id:value.id||uid(),cardinality:['1:N','1:1','0..1:N','1:0..N'].includes(value.cardinality)?value.cardinality:'1:N',identifying:!!value.identifying,onDelete:['NO ACTION','CASCADE','RESTRICT','SET NULL'].includes(value.onDelete)?value.onDelete:'NO ACTION',description};
 }

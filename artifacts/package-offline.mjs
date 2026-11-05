@@ -13,7 +13,7 @@ cpSync('C:/Program Files/nodejs/node.exe',join(out,'node.exe'));
 cpSync(resolve(root,'data/erd.sqlite'),join(out,'data/erd.sqlite'),{recursive:true});
 if(existsSync(resolve(root,'data/generated')))cpSync(resolve(root,'data/generated'),join(out,'data/generated'),{recursive:true});
 cpSync(resolve(root,'server.mjs'),join(out,'server.mjs'));
-for(const file of ['model.js','project-store.mjs','create-database.mjs','excel-export.mjs','data-excel.mjs','table-sql.js','common-dictionary-store.mjs'])cpSync(join(root,'src',file),join(out,'src',file));
+for(const file of ['model.js','project-store.mjs','create-database.mjs','excel-export.mjs','data-excel.mjs','table-sql.js','common-dictionary-store.mjs','db2-jdbc.mjs','Db2Metadata.java'])cpSync(join(root,'src',file),join(out,'src',file));
 writeFileSync(join(out,'package.json'),JSON.stringify({name:'kja-erd-offline',version:'1.0.0',private:true,type:'module',scripts:{start:'node server.mjs --production'},engines:{node:'>=24.10'},dependencies:{exceljs:JSON.parse(readFileSync(join(root,'node_modules/exceljs/package.json'))).version}},null,2));
 const packages=new Map();
 function locate(name,from){const req=createRequire(join(from,'package.json'));try{return dirname(req.resolve(name+'/package.json'));}catch{let current=dirname(req.resolve(name));while(current!==dirname(current)){const manifest=join(current,'package.json');if(existsSync(manifest)&&JSON.parse(readFileSync(manifest)).name===name)return current;current=dirname(current);}throw Error('Cannot resolve '+name);}}

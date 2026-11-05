@@ -1,0 +1,6 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {searchErd} from '../src/erd-search.js';
+const doc={tables:[{id:'a',name:'CUSTOMER',logical:'고객',schema:'APP',columns:[{id:'a1',name:'CUSTOMER_ID',logical:'고객번호'},{id:'a2',name:'NAME',logical:'이름'}]},{id:'b',name:'ORDER',logical:'주문',columns:[{id:'b1',name:'customer_id',logical:'주문 고객번호'}]}]};
+test('search finds table and column logical/physical names in order without mutating design',()=>{const before=JSON.stringify(doc);assert.deepEqual(searchErd(doc,' 고객 ').map(r=>[r.tableId,r.columnId]),[['a',null],['a','a1'],['b','b1']]);assert.equal(searchErd(doc,'customer').length,3);assert.equal(searchErd(doc,'고객')[0].tableName,'APP.CUSTOMER');assert.equal(JSON.stringify(doc),before);});
+test('search supports case sensitivity and exact names with literal punctuation and no duplicate row hits',()=>{assert.equal(searchErd(doc,'customer',{caseSensitive:true}).length,1);assert.equal(searchErd(doc,'고객',{wholeWord:true}).length,1);assert.equal(searchErd(doc,'customer_id',{wholeWord:true}).length,2);assert.equal(searchErd(doc,'[').length,0);assert.equal(searchErd(doc,' ').length,0);const both={tables:[{id:'x',name:'same',logical:'same',columns:[]}]};assert.deepEqual(searchErd(both,'same')[0].fields,['logical','name']);assert.equal(searchErd(both,'same').length,1);});

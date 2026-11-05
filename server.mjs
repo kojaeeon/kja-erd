@@ -1,3 +1,4 @@
+import {readDb2Metadata} from './src/db2-jdbc.mjs';
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, existsSync } from 'node:fs';
@@ -21,6 +22,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1');
   if (url.pathname.startsWith('/api/')) {
     try {
+      if(req.method==='POST'&&['/api/db2/test','/api/db2/metadata'].includes(url.pathname)){return json(res,200,await readDb2Metadata(await readBody(req),url.pathname.endsWith('/test')?'test':'metadata'));}
       if(url.pathname==='/api/dictionaries/common'&&req.method==='GET')return json(res,200,projectStore.common.read(url.searchParams.get('compact')!=='1'));
       if(url.pathname==='/api/dictionaries/common'&&req.method==='PUT')return json(res,200,projectStore.common.save(await readBody(req)));
       if(url.pathname==='/api/session'&&req.method==='GET')return json(res,200,projectStore.startup());
