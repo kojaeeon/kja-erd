@@ -1,0 +1,29 @@
+.note-node{width:100%;height:100%;min-width:260px;min-height:160px;display:flex;flex-direction:column;position:relative;border:1px solid #dfce8a;border-radius:7px;background:#fffdf0;color:#594a26;box-shadow:0 3px 14px #183c5010}
+.note-node.selected{outline:2px solid #b68b2466}
+.note-node header.note-drag-handle{height:36px;flex:none;display:flex;gap:7px;align-items:center;padding:5px 8px;background:#faf0c4;border-radius:6px 6px 0 0;cursor:grab;font-size:11px}
+.note-node header span{flex:1}
+.note-node header small{font:9px ui-monospace,Consolas,monospace;opacity:.65;letter-spacing:1px}
+.note-node header button{margin-left:0;color:inherit;padding:4px;border-radius:4px}
+.note-node header button:hover{background:#b68b2422;color:inherit}
+.note-node header button:focus-visible{outline:2px solid #b68b24;outline-offset:1px}
+.note-node footer{flex:none;padding:4px 9px;border-top:1px solid #dfce8a55;font-size:9px;opacity:.65;user-select:none}
+.note-sql-editor{flex:1;min-height:0;min-width:0;overflow:hidden;cursor:text;--sql-keyword:#6944b6;--sql-string:#20743c;--sql-comment:#7c806d;--sql-number:#b45418;--sql-type:#146e8b;--sql-operator:#8e5624}
+.note-sql-editor .cm-editor{height:100%;background:transparent;color:inherit;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;outline:none}
+.note-sql-editor .cm-scroller{overflow:auto;font:inherit}
+.note-sql-editor .cm-content{padding:8px 0;caret-color:currentColor;min-height:100%}
+.note-sql-editor .cm-line{padding:0 8px}
+.note-sql-editor .cm-gutters{background:#f7f1d9;color:#9a906b;border-right:1px solid #dfce8a55;user-select:none}
+.note-sql-editor .cm-activeLine,.note-sql-editor .cm-activeLineGutter{background:#b68b2410}
+.note-sql-editor .cm-selectionBackground,.note-sql-editor .cm-focused .cm-selectionBackground{background:#a6d7ed88}
+.note-sql-editor .cm-cursor{border-left-color:currentColor}
+.note-sql-editor .note-sql-keyword{color:var(--sql-keyword);font-weight:600}
+.note-sql-editor .note-sql-string{color:var(--sql-string)}
+.note-sql-editor .note-sql-comment{color:var(--sql-comment);font-style:italic}
+.note-sql-editor .note-sql-number{color:var(--sql-number)}
+.note-sql-editor .note-sql-type{color:var(--sql-type)}
+.note-sql-editor .note-sql-operator{color:var(--sql-operator)}
+:root[data-theme=dark] .note-node{background:#292b28;color:#e5dec8;border-color:#857348}
+:root[data-theme=dark] .note-node header.note-drag-handle{background:#3b392d}
+:root[data-theme=dark] .note-sql-editor{--sql-keyword:#c5a8ff;--sql-string:#a1d5a7;--sql-comment:#a7ae99;--sql-number:#f2b785;--sql-type:#9ed9ef;--sql-operator:#e7c687}
+:root[data-theme=dark] .note-sql-editor .cm-gutters{background:#242622;color:#b0a681;border-color:#85734855}
+:root[data-theme=dark] .note-sql-editor .cm-activeLine,:root[data-theme=dark] .note-sql-editor .cm-activeLineGutter{background:#e6cc7b10}
