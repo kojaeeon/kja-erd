@@ -93,7 +93,7 @@ export function planDb2Import(document,analysis,choices,options={}) {
     table.schema=schema;table.name=name;table.logical=source.logical||table.logical||source.name;
     table.columns=source.columns.map(c=>{const old=oldColumns.find(v=>normalize(v.name)===normalize(c.name)),term=dictionary.terms.find(t=>normalize(t.physical)===normalize(c.name)&&normalizeType(termType(t,dictionary.types))===normalizeType(c.type));
       const logical=o.logicalSource==='dictionary'?term?.logical||c.logical||old?.logical||c.name:c.logical||term?.logical||old?.logical||c.name;
-      let termId='';if(o.linkTerms&&term&&term.physical===c.name&&(!c.logical||logical===term.logical)){termId=term.id;}else if(o.linkTerms&&term&&c.logical)warnings.push(`${name}.${c.name}: SQL 주석을 유지하기 위해 사전 자동 연결을 생략했습니다.`);
+      let termId='';if(o.linkTerms&&term&&term.physical===c.name&&(!c.logical||logical===term.logical)){termId=term.id;}else if(o.linkTerms&&term&&c.logical)warnings.push(`${name}.${c.name}: 가져온 논리명을 유지하기 위해 사전 자동 연결을 생략했습니다.`);
       const imported={...column(c.name,logical,c.type),...c,id:old?.id||uid(),logical,termId};
       columnChanges.push({name:c.name,action:!old?'추가':['type','pk','nullable','ai','default','unique','logical','termId','identityMode','identityOptions'].some(k=>(old[k]??'')!==(imported[k]??''))?'변경':'유지'});return imported;});
     for(const c of oldColumns.filter(c=>!table.columns.some(v=>v.id===c.id))){columnChanges.push({name:c.name,action:o.removeMissing?'삭제':'기존 유지'});if(!o.removeMissing)table.columns.push(c);}

@@ -1,4 +1,4 @@
-import {readDb2Metadata} from './src/db2-jdbc.mjs';
+import {MetadataStore} from './src/metadata-store.mjs';
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, existsSync } from 'node:fs';
@@ -14,6 +14,7 @@ mkdirSync(resolve(root, 'data'), { recursive: true });
 const db = new DatabaseSync(resolve(root, 'data/erd.sqlite'));
 db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, name TEXT NOT NULL, document TEXT NOT NULL, updated_at TEXT NOT NULL); CREATE TABLE IF NOT EXISTS revisions (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, document TEXT NOT NULL, created_at TEXT NOT NULL);`);
 const projectStore=new ProjectStore(db);
+const metadataStore=new MetadataStore(db);
 const production = process.argv.includes('--production');
 const vite = production ? null : await (await import('vite')).createServer({ root, server: { middlewareMode: true }, appType: 'spa' });
 const json = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control':'no-store' }); res.end(JSON.stringify(body)); };
@@ -22,7 +23,9 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1');
   if (url.pathname.startsWith('/api/')) {
     try {
-      if(req.method==='POST'&&['/api/db2/test','/api/db2/metadata'].includes(url.pathname)){return json(res,200,await readDb2Metadata(await readBody(req),url.pathname.endsWith('/test')?'test':'metadata'));}
+      if(req.method==='GET'&&url.pathname==='/api/metadata/tables')return json(res,200,metadataStore.read({schema:url.searchParams.get('schema')||'',search:url.searchParams.get('search')||''}));
+      const metadataFiles={'/api/metadata/schema':['src/metadata-schema.sql','metadata-schema.sql'],'/api/metadata/example':['docs/metadata-example.sql','metadata-example.sql'],'/api/metadata/guide':['docs/sqlite-metadata-guide.md','sqlite-metadata-guide.md']};
+      if(req.method==='GET'&&metadataFiles[url.pathname]){const [file,name]=metadataFiles[url.pathname];res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Content-Disposition':`attachment; filename="${name}"`});return res.end(readFileSync(resolve(root,file)));}
       if(url.pathname==='/api/dictionaries/common'&&req.method==='GET')return json(res,200,projectStore.common.read(url.searchParams.get('compact')!=='1'));
       if(url.pathname==='/api/dictionaries/common'&&req.method==='PUT')return json(res,200,projectStore.common.save(await readBody(req)));
       if(url.pathname==='/api/session'&&req.method==='GET')return json(res,200,projectStore.startup());
