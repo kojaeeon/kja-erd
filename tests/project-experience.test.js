@@ -25,7 +25,7 @@ test('drag reordering inserts before or after target without changing column IDs
 test('Excel header colors apply to all headers, adapt text contrast, persist per project and validate input',async()=>{
   for(const color of ['#2563eb','#ffffff']){const d=demo();d.exportOptions={headerColor:color};const db=new DatabaseSync(':memory:');try{const store=new ProjectStore(db);store.save(d.id,d);assert.equal(store.get(d.id).exportOptions.headerColor,color);}finally{db.close();}
     const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(await exportExcel(d));const colors=definitionColors(d.exportOptions);
-    for(const [sheet,cell] of [['blog_post','A8'],['All Table List','A8'],['Word Dictionary List','A2'],['All Column List','A1']]){assert.equal(workbook.getWorksheet(sheet).getCell(cell).fill.fgColor.argb,colors.headerArgb);assert.equal(workbook.getWorksheet(sheet).getCell(cell).font.color.argb,colors.foregroundArgb);}
+    for(const [sheet,cell] of [['테이블 정의서','A1'],['테이블 정의서','I1'],['테이블 정의서','S1']]){assert.equal(workbook.getWorksheet(sheet).getCell(cell).fill.fgColor.argb,colors.headerArgb);assert.equal(workbook.getWorksheet(sheet).getCell(cell).font.color.argb,colors.foregroundArgb);}
   }
   assert.equal(definitionColors().headerArgb,'FF168D86');assert.equal(definitionColors({headerColor:'#ffffff'}).foregroundArgb,'FF17212B');await assert.rejects(exportExcel({...demo(),exportOptions:{headerColor:'invalid'}}),/헤더 색상/);
 });

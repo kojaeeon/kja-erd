@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {demo} from '../src/model.js';
+import {DatabaseSync} from 'node:sqlite';
+import {demo,sql} from '../src/model.js';
 import {generateSqlXml,jdbcType} from '../src/sql-xml.js';
 test('MyBatis uses matching VO properties, typed bindings and safe DB2 keys',()=>{
   const d=demo(),t=d.tables[1],before=structuredClone(d),r=generateSqlXml(d,t.id,{keyMode:'db2'});
@@ -25,4 +26,40 @@ test('XML attribute quotes remain escaped while SQL body quotes stay literal',()
   const r=generateSqlXml(d,t.id);
   assert.match(r.text,/column="AUTHOR&quot;ID"/);
   assert.match(r.text,/"AUTHOR""ID"/);
+});
+
+test('query XML omits resultMap and includes, and aliases SELECT columns to the chosen VO properties',()=>{
+  const d=demo('sqlite'),t=d.tables[0],r=generateSqlXml(d,t.id,{format:'queries'});
+  assert.doesNotMatch(r.text,/<resultMap|resultMap=|<include|<sql /);
+  assert.match(r.text,/resultType="com.example.vo.BlogAuthorVO"/);
+  assert.match(r.text,/"author_id" AS "authorId", \/\* 저자 아이디 \*\//);
+  assert.match(r.text,/FROM "blog_author" \/\* 저자 \*\//);
+  const query=r.text.match(/<select id="selectById"[^>]*>([\s\S]*?)<\/select>/)[1].replace(/#\{(\w+)(?:,[^}]+)?\}/g,':$1');
+  const db=new DatabaseSync(':memory:');try{db.exec(sql(d).text);db.exec("INSERT INTO blog_author(display_name) VALUES ('tester')");const row=db.prepare(query).get({authorId:1});assert.equal(row.authorId,1);assert.equal(row.displayName,'tester');}finally{db.close();}
+});
+
+test('pure SQL uses named bindings and executable CRUD without XML or Mapper validation',()=>{
+  const d=demo('sqlite'),t=d.tables[0],before=structuredClone(d);
+  const r=generateSqlXml(d,t.id,{format:'sql',namespace:'invalid namespace',voType:'invalid type',keyMode:'db2'});
+  assert.equal(r.fileName,'BlogAuthor.sql');assert.equal(r.mimeType,'text/plain;charset=utf-8');
+  assert.doesNotMatch(r.text,/<mapper|<select|<if|resultMap|resultType|#\{|&quot;|&amp;/);
+  assert.match(r.text,/:authorId/);assert.match(r.text,/"display_name", \/\* 표시 이름 \*\//);
+  const statements=r.text.split(';').map(s=>s.trim()).filter(Boolean);assert.equal(statements.length,5);
+  const db=new DatabaseSync(':memory:');try{
+    db.exec(sql(d).text);db.prepare(statements[2]).run({displayName:'before',email:'test@example.com'});
+    assert.equal(db.prepare(statements[0]).get({authorId:1}).display_name,'before');assert.equal(db.prepare(statements[1]).all().length,1);
+    db.prepare(statements[3]).run({authorId:1,displayName:'after',email:null});assert.equal(db.prepare(statements[0]).get({authorId:1}).display_name,'after');
+    db.prepare(statements[4]).run({authorId:1});assert.equal(db.prepare(statements[1]).all().length,0);
+  }finally{db.close();}
+  assert.deepEqual(d,before);
+});
+
+test('SELECT logical comments are optional and escape SQL delimiters and XML content in every format',()=>{
+  for(const format of ['mapper','queries','sql'])for(const dialect of ['db2','sqlite','mysql','postgres']){
+    const d=demo(dialect),t=d.tables[0];t.logical='테이블 <& */ /* 주석';t.columns[0].logical='컬럼 <& */ /* 주석\n다음 줄';
+    const r=generateSqlXml(d,t.id,{format,comments:false,insert:false,update:false,delete:false});
+    const logical=format==='sql'?'컬럼 <&':'컬럼 &lt;&amp;';assert.ok(r.text.includes('/* '+logical+' * / / * 주석 다음 줄 */'));
+    if(format!=='sql')assert.doesNotMatch(r.text,/<&/);
+    const disabled=generateSqlXml(d,t.id,{format,comments:false,selectComments:false,insert:false,update:false,delete:false});assert.ok(!disabled.text.includes('/* 컬럼'));assert.ok(!disabled.text.includes('/* 테이블'));
+  }
 });

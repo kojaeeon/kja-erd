@@ -15,7 +15,7 @@ export default function JavaVoDialog({doc,tableId,download,setStatus}) {
       <label>숫자 / 논리 타입<select aria-label="VO 숫자 타입" value={options.boxed?'boxed':'primitive'} onChange={e=>change('boxed',e.target.value==='boxed')}><option value="boxed">래퍼 (추천) · Integer / Boolean</option><option value="primitive">기본형 · int / boolean (NULL 불가)</option></select></label>
       <label>날짜 / 시간 타입<select aria-label="VO 날짜 타입" value={options.dates} onChange={e=>change('dates',e.target.value)}><option value="modern">java.time (추천)</option><option value="sql">java.sql · Date / Time / Timestamp</option></select></label>
       <label>Getter / Setter<select aria-label="VO 접근자" value={options.accessors} onChange={e=>change('accessors',e.target.value)}><option value="plain">직접 생성 (추가 의존성 없음)</option><option value="lombok">Lombok @Getter / @Setter</option><option value="none">필드만 생성</option></select></label>
-      <div><label className="check-label"><input type="checkbox" checked={options.comments} onChange={e=>change('comments',e.target.checked)}/> 논리명 / 타입 주석</label><label className="check-label"><input type="checkbox" checked={options.serializable} onChange={e=>change('serializable',e.target.checked)}/> Serializable</label></div>
+      <div><label className="check-label"><input type="checkbox" checked={options.comments} onChange={e=>change('comments',e.target.checked)}/> 논리명 주석</label><label className="check-label"><input type="checkbox" checked={options.serializable} onChange={e=>change('serializable',e.target.checked)}/> Serializable</label></div>
     </div>
     {!options.boxed&&<p className="hint">기본형 필드는 DB의 NULL 값을 표현할 수 없습니다.</p>}
     {(result.error||error)&&<p role="alert" className="errors">{result.error||error}</p>}

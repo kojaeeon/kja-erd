@@ -276,12 +276,13 @@ export function sql(d, tableId, {includeForeignKeys = true} = {}) {
     const parent=d.tables.find(t=>t.id===r.source); const pc=parent.columns.find(c=>c.id===r.sourceColumn); const child=d.tables.find(t=>t.id===r.target); const cc=child.columns.find(c=>c.id===r.targetColumn);
     return `FOREIGN KEY (${q(cc.name)}) REFERENCES ${tableSqlName(parent,q)} (${q(pc.name)}) ON DELETE ${['NO ACTION','CASCADE','RESTRICT','SET NULL'].includes(r.onDelete)?r.onDelete:'NO ACTION'}`;
   };
+  const logicalComment=value=>value?' /* '+String(value).replaceAll('/*','/ *').replaceAll('*/','* /').replace(/[\r\n]+/g,' ')+' */':'';
   const statements = tables.map(t=>{
     const pks=t.columns.filter(c=>c.pk); const inline = dialect==='sqlite' && pks.length===1;
-    const rows=t.columns.map(c=>`  ${q(c.name)} ${dataType(c)}${inline&&c.pk?' PRIMARY KEY':''}${(!c.nullable||c.pk||(dialect==='db2'&&c.ai))&&!(inline&&c.pk)?' NOT NULL':''}${c.ai?(dialect==='sqlite'?' AUTOINCREMENT':dialect==='mysql'?' AUTO_INCREMENT':` GENERATED ${dialect==='db2'&&c.identityMode==='ALWAYS'?'ALWAYS':'BY DEFAULT'} AS IDENTITY${dialect==='db2'&&c.identityOptions?' ('+c.identityOptions+')':''}`):''}${c.unique?' UNIQUE':''}${c.default?` DEFAULT ${c.default}`:''}`);
+    const rows=t.columns.map(c=>`  ${q(c.name)} ${dataType(c)}${inline&&c.pk?' PRIMARY KEY':''}${(!c.nullable||c.pk||(dialect==='db2'&&c.ai))&&!(inline&&c.pk)?' NOT NULL':''}${c.ai?(dialect==='sqlite'?' AUTOINCREMENT':dialect==='mysql'?' AUTO_INCREMENT':` GENERATED ${dialect==='db2'&&c.identityMode==='ALWAYS'?'ALWAYS':'BY DEFAULT'} AS IDENTITY${dialect==='db2'&&c.identityOptions?' ('+c.identityOptions+')':''}`):''}${c.unique?' UNIQUE':''}${c.default?` DEFAULT ${c.default}`:''}${logicalComment(c.logical)}`);
     if(pks.length&&!inline) rows.push(`  PRIMARY KEY (${pks.map(c=>q(c.name)).join(', ')})`);
     if (dialect!=='db2') for(const r of relations.filter(r=>r.target===t.id)) rows.push('  '+foreignKey(r));
-    return `${t.logical?'-- '+t.logical.replaceAll('\n',' '):''}\nCREATE TABLE ${tableSqlName(t,q)} (\n${rows.join(',\n')}\n);`;
+    return `${t.logical?logicalComment(t.logical).trim()+'\n':''}CREATE TABLE ${tableSqlName(t,q)} (\n${rows.join(',\n')}\n);`;
   });
   for(const t of tables) for(const ix of t.indexes) { const cols=ix.columns.map(id=>t.columns.find(c=>c.id===id)).filter(Boolean); if(cols.length) statements.push(`CREATE ${ix.unique?'UNIQUE ':''}INDEX ${ix.schema?q(ix.schema)+'.':''}${q(ix.name)} ON ${tableSqlName(t,q)} (${cols.map(c=>q(c.name)).join(', ')});`); }
   if (dialect==='db2') {

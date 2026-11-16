@@ -25,9 +25,9 @@ export function generateJavaVo(table,options={}) {
   fields.forEach(f=>{if(mappings[f.type])imports.add(mappings[f.type]);});if(o.serializable)imports.add('java.io.Serializable');if(o.accessors==='lombok'){imports.add('lombok.Getter');imports.add('lombok.Setter');}
   const comment=s=>String(s||'').replaceAll('\\','/').replaceAll('*/','* /').replace(/[\r\n]+/g,' ');
   const lines=[];if(o.packageName)lines.push(`package ${o.packageName};`,'');if(imports.size)lines.push(...[...imports].sort().map(i=>`import ${i};`),'');
-  if(o.comments)lines.push(`/** ${comment(table.logical||table.name)} (${comment(table.name)}) */`);if(o.accessors==='lombok')lines.push('@Getter','@Setter');lines.push(`public class ${o.className}${o.serializable?' implements Serializable':''} {`);
+  if(o.comments&&table.logical)lines.push(`/** ${comment(table.logical)} */`);if(o.accessors==='lombok')lines.push('@Getter','@Setter');lines.push(`public class ${o.className}${o.serializable?' implements Serializable':''} {`);
   if(o.serializable)lines.push('    private static final long serialVersionUID = 1L;','');
-  for(const f of fields){if(o.comments)lines.push(`    /** ${comment(f.column.logical||f.column.name)} · ${comment(f.column.name)} · ${comment(f.column.type)}${f.column.pk?' · PK':''}${f.column.nullable?' · NULL 허용':''} */`);lines.push(`    private ${f.type} ${f.name};`,'');}
+  for(const f of fields){if(o.comments&&f.column.logical)lines.push(`    /** ${comment(f.column.logical)} */`);lines.push(`    private ${f.type} ${f.name};`,'');}
   if(o.accessors==='plain')for(const f of fields){const suffix=f.name.charAt(0).toUpperCase()+f.name.slice(1);lines.push(`    public ${f.type} get${suffix}() {`,`        return ${f.name};`,'    }','',`    public void set${suffix}(${f.type} ${f.name}) {`,`        this.${f.name} = ${f.name};`,'    }','');}
   lines.push('}');return {text:lines.join('\n')+'\n',fields,className:o.className};
 }

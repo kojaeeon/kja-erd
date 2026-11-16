@@ -15,3 +15,9 @@ test('VO generator supports Lombok, original names and validates collisions and 
   const duplicate={...table,columns:[{name:'POST_ID',type:'INT'},{name:'postId',type:'INT'}]};assert.throws(()=>generateJavaVo(duplicate),/중복/);
   const injected={...table,logical:'hi */ public class X {',columns:[{name:'CLASS',type:'INT',logical:'*/ bad'}]};assert.match(generateJavaVo(injected).text,/private Integer class_/);assert.doesNotMatch(generateJavaVo(injected).text,/hi \*\//);
 });
+
+test('VO uses logical-name comments and omits comments when a logical name is absent',()=>{
+  const r=generateJavaVo({...table,columns:[{name:'USER_ID',logical:'사용자ID',type:'BIGINT'},{name:'USER_NAME',logical:'',type:'VARCHAR(100)'}]},{accessors:'none'});
+  assert.ok(r.text.includes('/** 게시글 */'));assert.ok(r.text.includes('/** 사용자ID */'));
+  assert.ok(!r.text.includes('/** USER_NAME'));assert.ok(!r.text.includes(' · BIGINT'));
+});

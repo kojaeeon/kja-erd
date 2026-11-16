@@ -36,7 +36,7 @@ test('removing a shadowed shared term retains the private definition; project pu
   }finally{db.close();}
 });
 test('shared dictionary definitions participate in Excel and project validation without copying them into project scope',async()=>{
-  const d=project('정의서');d.commonDictionary=seed();synchronize(d);const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(await exportExcel(d));assert.equal(workbook.getWorksheet('Name Dictionary List').getCell('C3').value,'customer_code');assert.equal(workbook.getWorksheet('Name Dictionary List').getCell('D3').value,'VARCHAR(12)');assert.deepEqual(d.terms,[]);
+  const d=project('정의서');d.commonDictionary=seed();synchronize(d);const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(await exportExcel(d));assert.equal(workbook.getWorksheet('테이블 정의서').getCell('I2').value,'customer_code');assert.equal(workbook.getWorksheet('테이블 정의서').getCell('K2').value,'VARCHAR(12)');assert.deepEqual(d.terms,[]);
   d.terms.push({id:'own',logical:'자체 용어',physical:'own',typeId:'shared:types:domain',wordIds:[]});assert.equal(dictionaryErrors(d).length,0);
 });
 test('project saves cannot replace the common dictionary with a stale or forged embedded snapshot',()=>{

@@ -88,3 +88,16 @@ test('SQLite output without FK creates no constraint even for standalone child t
     assert.equal(d.relations.length,3);
   }finally{db.close();}
 });
+
+test('all SQL dialects include safe block comments for table and column logical names',()=>{
+  for(const dialect of ['db2','sqlite','mysql','postgres']) {
+    const d=demo(dialect),t=d.tables[0];t.logical='사용자';t.columns[0].logical='사용자ID';t.columns[1].logical='이름 */ /* 위험\n다음 줄';
+    const r=sql(d,t.id);assert.deepEqual(r.errors,[]);
+    assert.ok(r.text.includes('/* 사용자 */\nCREATE TABLE'));
+    assert.ok(r.text.includes('/* 사용자ID */'));
+    assert.ok(r.text.includes('/* 이름 * / / * 위험 다음 줄 */'));
+    assert.ok(!r.text.includes('-- 사용자'));
+    if(dialect==='sqlite'){const db=new DatabaseSync(':memory:');try{db.exec(r.text);assert.equal(db.prepare('PRAGMA table_info(blog_author)').all().length,t.columns.length);}finally{db.close();}}
+    t.columns[1].logical='';assert.ok(!sql(d,t.id).text.includes('/*  */'));
+  }
+});

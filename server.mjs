@@ -37,7 +37,7 @@ const server = http.createServer(async (req, res) => {
         const {document,tableId,includeIdentity,content}=await readBody(req);if(typeof content!=='string'||content.length>2700000)throw Error('2MB 이하의 엑셀 파일을 선택하세요.');return json(res,200,await excelTestData(synchronize({...document,commonDictionary:projectStore.common.read()}),tableId,Buffer.from(content,'base64'),includeIdentity));
       }
       if(req.method==='POST'&&url.pathname==='/api/export/excel'){
-        const buffer=await exportExcel(synchronize({...await readBody(req),commonDictionary:projectStore.common.read()}));res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':'attachment; filename="erd.xlsx"'});return res.end(buffer);
+        const buffer=await exportExcel(synchronize({...await readBody(req),commonDictionary:projectStore.common.read()}),{tableId:url.searchParams.get('tableId')||undefined});res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':'attachment; filename="erd.xlsx"'});return res.end(buffer);
       }
       if(req.method==='POST'&&url.pathname==='/api/databases'){
         const {script}=await readBody(req);const result=createDatabase(script,resolve(root,'data/generated'));return json(res,201,{id:result.id,tables:result.tables,file:`data/generated/${result.id}.sqlite`,downloadUrl:`/api/databases/${result.id}/download`});
