@@ -230,6 +230,15 @@ export function validate(d) {
   for(const r of d.relations) if(!d.tables.find(t=>t.id===r.source)?.columns.find(c=>c.id===r.sourceColumn) || !d.tables.find(t=>t.id===r.target)?.columns.find(c=>c.id===r.targetColumn)) throw new Error('관계가 존재하지 않는 컬럼을 참조합니다.');
   return d;
 }
+export function changeTableSchema(document, tableId, value) {
+  const table=document.tables.find(t=>t.id===tableId);
+  if(!table)throw Error('테이블을 찾을 수 없습니다.');
+  const schema=String(value??'').trim();
+  if(schema.length>128 || /[\x00-\x1f\x7f]/.test(schema))throw Error('스키마명은 제어문자 없이 128자 이내로 입력하세요.');
+  if(document.tables.some(t=>t.id!==tableId && (t.schema||'').toLowerCase()===schema.toLowerCase() && t.name.toLowerCase()===table.name.toLowerCase()))throw Error('해당 스키마에 같은 이름의 테이블이 있습니다.');
+  table.schema=schema;
+  return schema;
+}
 export const tableSqlName=(table,q)=>table.schema?`${q(table.schema)}.${q(table.name)}`:q(table.name);
 export function sql(d, tableId, {includeForeignKeys = true} = {}) {
   const errors = []; const dialect = d.dialect; const q = s => dialect === 'mysql' ? '`'+s.replaceAll('`','``')+'`' : '"'+s.replaceAll('"','""')+'"';

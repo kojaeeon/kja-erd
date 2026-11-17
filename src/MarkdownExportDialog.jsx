@@ -1,8 +1,9 @@
+import SchemaName from './SchemaName';
 import React,{useState} from 'react';
 import {Copy,Download} from 'lucide-react';
 import {markdownFields,defaultMarkdownFields,selectedMarkdownFields,generateMarkdown} from './markdown-export';
 
-export default function MarkdownExportDialog({doc,tableId,download,onSave,setStatus,settingsOnly=false}) {
+export default function MarkdownExportDialog({doc,tableId,download,onSave,setStatus,settingsOnly=false,onSchemaChange}) {
   const [fields,setFields]=useState(()=>selectedMarkdownFields(doc.exportOptions?.markdownFields).map(f=>f.id));
   const [source,setSource]=useState(false),[message,setMessage]=useState('');
   let result,error;
@@ -17,7 +18,7 @@ export default function MarkdownExportDialog({doc,tableId,download,onSave,setSta
     <p className="hint">컬럼명에서 카멜케이스를 생성합니다. 예: CUSTOMER_ID → customerId. Java VO와 같은 이름 변환 규칙을 사용합니다. 설정은 프로젝트에 저장합니다.</p></>}
     {!settingsOnly&&<>{error&&<p className="errors" role="alert">{error}</p>}
     <div className="sql-example-tabs"><button aria-pressed={!source} onClick={()=>setSource(false)}>표 미리보기</button><button aria-pressed={source} onClick={()=>setSource(true)}>MD 소스</button></div>
-    {result&&(source?<textarea className="sql-output" aria-label="Markdown 소스" readOnly spellCheck={false} value={result.text}/>:<div className="markdown-preview">{result.sections.map(s=><section key={s.id}><h3>{s.heading}</h3>{s.description&&<p>{s.description}</p>}<div className="markdown-table-scroll"><table><thead><tr>{result.fields.map(f=><th key={f.id}>{f.label}</th>)}</tr></thead><tbody>{s.rows.map((r,i)=><tr key={i}>{result.fields.map(f=><td key={f.id}>{r[f.id]}</td>)}</tr>)}</tbody></table></div>{!s.rows.length&&<p className="hint">컬럼이 없습니다.</p>}</section>)}</div>)}
+    {result&&(source?<textarea className="sql-output" aria-label="Markdown 소스" readOnly spellCheck={false} value={result.text}/>:<div className="markdown-preview">{result.sections.map(s=><section key={s.id}><h3>{s.heading}</h3>{onSchemaChange&&<p>스키마: <SchemaName value={doc.tables.find(t=>t.id===s.id)?.schema} tableName={doc.tables.find(t=>t.id===s.id)?.name} onChange={schema=>onSchemaChange(s.id,schema)}/></p>}{s.description&&<p>{s.description}</p>}<div className="markdown-table-scroll"><table><thead><tr>{result.fields.map(f=><th key={f.id}>{f.label}</th>)}</tr></thead><tbody>{s.rows.map((r,i)=><tr key={i}>{result.fields.map(f=><td key={f.id}>{r[f.id]}</td>)}</tr>)}</tbody></table></div>{!s.rows.length&&<p className="hint">컬럼이 없습니다.</p>}</section>)}</div>)}
     </>}
     {message&&<p role="status">{message}</p>}
     <div className="modal-actions">{settingsOnly?<button className="primary" disabled={!fields.length} onClick={save}>출력 설정 저장</button>:<><button disabled={!result} onClick={async()=>{try{await navigator.clipboard.writeText(result.text);setStatus('Markdown 복사 완료');setMessage('Markdown을 복사했습니다.');}catch{setSource(true);setMessage('MD 소스에서 텍스트를 선택하여 직접 복사하세요.');}}}><Copy size={15}/> 복사</button><button className="primary" disabled={!result} onClick={()=>{download(result.fileName,result.text,'text/markdown;charset=utf-8');setStatus('Markdown 내보내기 완료');}}><Download size={15}/> .md 다운로드</button></>}</div>

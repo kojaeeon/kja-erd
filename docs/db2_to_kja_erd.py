@@ -112,6 +112,14 @@ CREATE TABLE IF NOT EXISTS metadata_columns (
 '''
 
 
+def jdbc_value(value: Any) -> Any:
+    """Convert Java strings before pandas treats them as iterable values."""
+    if callable(getattr(value, 'getClass', None)):
+        if str(value.getClass().getName()) == 'java.lang.String':
+            return str(value)
+    return value
+
+
 def text(value: Any) -> str:
     return '' if value is None or pd.isna(value) else str(value)
 
@@ -173,15 +181,25 @@ class Db2ToKjaErd:
             result = self.query_df(sql, params)
             if not isinstance(result, pd.DataFrame):
                 raise TypeError('query_df는 pandas.DataFrame을 반환해야 합니다.')
-            result = result.copy()
+            result = result.copy().map(jdbc_value)
         else:
             cursor = self.connection.cursor()
             try:
                 cursor.execute(sql, params)
-                result = pd.DataFrame.from_records(cursor.fetchall(), columns=[str(d[0]) for d in cursor.description])
+                rows = [[jdbc_value(v) for v in row] for row in cursor.fetchall()]
+                result = pd.DataFrame.from_records(rows, columns=[str(d[0]) for d in cursor.description])
             finally:
                 cursor.close()
-        result.columns = [str(c).lower() for c in result.columns]
+        result.columns = [str(c).strip().lower() for c in result.columns]
+        # Some JDBC clients expose original catalog names instead of SQL aliases.
+        result = result.rename(columns={
+            'tabschema': 'schema_name', 'tabname': 'table_name',
+            'colname': 'column_name', 'remarks': 'logical_name',
+            'typeschema': 'type_schema', 'typename': 'type_name',
+            'length': 'type_length', 'scale': 'type_scale',
+            'typestringunits': 'string_units', 'stringunitslength': 'string_length',
+            'codepage': 'code_page', 'generated': 'generated_kind',
+        })
         if result.columns.duplicated().any():
             raise ValueError('조회 결과에 중복 컬럼명이 있습니다.')
         return result
@@ -198,6 +216,14 @@ class Db2ToKjaErd:
         condition = 'AND t.TABNAME IN (' + ','.join('?' for _ in table_names) + ')' if table_names else ''
         tables = self._query(TABLE_SQL.format(table_filter=condition), params)
         raw = self._query(COLUMN_SQL.format(table_filter=condition), params)
+        required_raw = ['schema_name', 'table_name', 'ordinal_position', 'column_name',
+                        'logical_name', 'type_name', 'is_pk', 'is_nullable',
+                        'is_unique', 'default_value', 'is_identity']
+        for label, frame, required in [('테이블', tables, TABLE_FIELDS), ('컬럼', raw, required_raw)]:
+            missing_fields = set(required) - set(frame.columns)
+            if missing_fields:
+                raise ValueError(f'{label} 조회 필수 컬럼 누락: {sorted(missing_fields)}; '
+                                 f'실제 컬럼: {frame.columns.tolist()}. SQL 별칭(AS)과 JDBC 컬럼 라벨을 확인하세요.')
         if tables.empty:
             raise ValueError('조회된 테이블이 없습니다. 스키마·테이블명·카탈로그 조회 권한을 확인하세요.')
         if table_names is not None:
