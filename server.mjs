@@ -23,7 +23,15 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1');
   if (url.pathname.startsWith('/api/')) {
     try {
-      if(req.method==='GET'&&url.pathname==='/api/metadata/tables')return json(res,200,metadataStore.read({schema:url.searchParams.get('schema')||'',search:url.searchParams.get('search')||''}));
+      if (url.pathname === '/api/metadata/tables') {
+        const schema = url.searchParams.get('schema') ?? '';
+        const name = url.searchParams.get('name');
+        if (req.method === 'GET') return json(res, 200, metadataStore.read({schema, search: url.searchParams.get('search') ?? ''}));
+        if (req.method === 'POST') return json(res, 201, metadataStore.write(await readBody(req)));
+        if (req.method === 'PUT') return json(res, 200, metadataStore.write(await readBody(req), {schema, name}));
+        if (req.method === 'DELETE') return json(res, 200, metadataStore.remove({schema, name}));
+        return json(res, 405, {error: '지원하지 않는 요청입니다.'});
+      }
       const metadataFiles={'/api/metadata/schema':['src/metadata-schema.sql','metadata-schema.sql'],'/api/metadata/example':['docs/metadata-example.sql','metadata-example.sql'],'/api/metadata/guide':['docs/sqlite-metadata-guide.md','sqlite-metadata-guide.md']};
       if(req.method==='GET'&&metadataFiles[url.pathname]){const [file,name]=metadataFiles[url.pathname];res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Content-Disposition':`attachment; filename="${name}"`});return res.end(readFileSync(resolve(root,file)));}
       if(url.pathname==='/api/dictionaries/common'&&req.method==='GET')return json(res,200,projectStore.common.read(url.searchParams.get('compact')!=='1'));

@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {MetadataStore} from '../src/metadata-store.mjs';
 import {planDb2Import} from '../src/db2-import.js';
-import {blank,validate} from '../src/model.js';
+import {blank,demo,validate} from '../src/model.js';
 const example=readFileSync(new URL('../docs/metadata-example.sql',import.meta.url),'utf8');
 const choices=a=>Object.fromEntries(a.tables.map(t=>[t.key,{selected:t.valid,mode:'skip',rename:t.name+'_copy'}]));
 
@@ -85,4 +85,75 @@ test('query limits fail explicitly and rollback leaves catalog usable',()=>{
     for(let i=0;i<501;i++)insert.run('APP','T'+i,'');
     assert.throws(()=>store.read(),/500/);assert.equal(store.read({search:'T500'}).tables.length,1);
   }finally{db.close();}
+});
+
+test('ERD table registration and catalog edits preserve properties and import the edited column order', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const store = new MetadataStore(db);
+    const project = demo();
+    const table = {...project.tables[0], schema: 'APP'};
+    const before = structuredClone(project);
+    assert.deepEqual(store.write(table), {schema: 'APP', name: table.name});
+    const [registered] = store.read({schema: 'app'}).tables;
+    assert.equal(registered.columns[0].pk, true);
+    assert.equal(registered.columns[0].ai, true);
+    assert.equal(registered.columns[0].nullable, false);
+
+    const edited = {
+      ...registered,
+      schema: '',
+      name: 'AUTHOR_ARCHIVE',
+      logical: '저자 아카이브',
+      columns: [
+        {...registered.columns[2], name: 'EMAIL_ADDRESS', type: 'VARCHAR(320)', unique: true, default: "'unknown'"},
+        {...registered.columns[0], identityMode: 'ALWAYS'},
+      ],
+    };
+    store.write(edited, {schema: 'app', name: table.name.toUpperCase()});
+    const analysis = store.read();
+    assert.equal(analysis.tables.length, 1);
+    const [saved] = analysis.tables;
+    assert.deepEqual(saved.columns.map(c => c.name), ['EMAIL_ADDRESS', table.columns[0].name]);
+    assert.equal(saved.columns[0].type, 'VARCHAR(320)');
+    assert.equal(saved.columns[0].unique, true);
+    assert.equal(saved.columns[0].default, "'unknown'");
+    assert.equal(saved.columns[1].identityMode, 'ALWAYS');
+    assert.equal(saved.logical, edited.logical);
+    const imported = planDb2Import(blank(), analysis, choices(analysis));
+    assert.equal(imported.added, 1);
+    assert.equal(imported.document.tables[0].name, edited.name);
+    assert.deepEqual(project, before);
+    assert.deepEqual(store.remove({name: 'author_archive'}), {deleted: true});
+    assert.deepEqual(store.read().tables, []);
+    assert.equal(db.prepare('SELECT count(*) AS count FROM metadata_columns').get().count, 0);
+  } finally {
+    db.close();
+  }
+});
+
+test('catalog rejects duplicate keys, duplicate column names and rolls back partial edits on failure', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const store = new MetadataStore(db);
+    db.exec(example);
+    const before = store.read();
+    const [customer, other] = before.tables;
+    const key = {schema: customer.schema, name: customer.name};
+    assert.throws(() => store.write({...customer, name: customer.name.toLowerCase()}), {status: 409});
+    assert.throws(() => store.write({...customer, name: other.name}, key), {status: 409});
+    assert.throws(() => store.write({
+      ...customer, columns: [customer.columns[0], {...customer.columns[0], name: customer.columns[0].name.toLowerCase()}],
+    }, key), /중복 컬럼명/);
+    assert.throws(() => store.write(customer, {name: 'MISSING'}), {status: 404});
+    assert.throws(() => store.remove({name: 'MISSING'}), {status: 404});
+    db.exec(`CREATE TRIGGER reject_test_column BEFORE INSERT ON metadata_columns
+      WHEN new.column_name = 'REJECTED' BEGIN SELECT RAISE(ABORT, 'test write failure'); END;`);
+    assert.throws(() => store.write({
+      ...customer, name: 'RENAMED', columns: [customer.columns[0], {...customer.columns[1], name: 'REJECTED'}],
+    }, key), /test write failure/);
+    assert.deepEqual(store.read(), before);
+  } finally {
+    db.close();
+  }
 });

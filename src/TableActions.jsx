@@ -1,8 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
-import {MoreHorizontal, Code2, Copy, Trash2, List,FlaskConical,BookOpen} from 'lucide-react';
+import {MoreHorizontal, Code2, Copy, Trash2, List,FlaskConical,BookOpen,Database} from 'lucide-react';
 
-export default function TableActions({name, onOut, onTestData, onFavorites, onIndexes, onCopy, onDelete}) {
+export default function TableActions({name, onOut, onTestData, onFavorites, onIndexes, onCopy, onMetadata, onDelete}) {
   const [position, setPosition] = useState(null);
   const trigger = useRef(), menu = useRef();
   useEffect(() => {
@@ -22,6 +22,7 @@ export default function TableActions({name, onOut, onTestData, onFavorites, onIn
       <button role="menuitem" onClick={()=>run(onTestData)}><FlaskConical size={15}/> 테스트 데이터 생성</button>
       <button role="menuitem" onClick={()=>run(onFavorites)}><BookOpen size={15}/> 즐겨쓰는 SQL 예시</button>
       <button role="menuitem" onClick={()=>run(onIndexes)}><List size={15}/> 인덱스 / UNIQUE</button>
+      <button role="menuitem" onClick={()=>run(onMetadata)}><Database size={15}/> SQLite 메타데이터에 등록</button>
       <button role="menuitem" onClick={()=>run(onCopy)}><Copy size={15}/> 테이블 복제</button>
       <button role="menuitem" onClick={()=>run(onDelete)}><Trash2 size={15}/> 테이블 삭제</button>
     </div>,document.body)}
